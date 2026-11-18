@@ -234,7 +234,7 @@ export default function App() {
     <div style={{ display: 'flex', fontFamily: 'system-ui, -apple-system, sans-serif', height: '100vh', color: '#1f2937' }}>
       <aside style={{ width: 280, background: '#1e293b', color: '#f8fafc', display: 'flex', flexDirection: 'column', padding: 16 }}>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, color: '#fbbf24' }}>🍺 Y&B Crew Beer C.O.</div>
-        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>Brewing Studio · SQLite</div>
+        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>Yuki & Bombs Crew Brewing Studio</div>
 
         <nav style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
           {[
