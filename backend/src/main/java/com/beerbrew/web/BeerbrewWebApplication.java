@@ -1,4 +1,4 @@
-package com.brewtarget.web;
+package com.beerbrew.web;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -6,9 +6,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import java.io.File;
 
 @SpringBootApplication
-public class BrewtargetWebApplication {
+public class BeerbrewWebApplication {
     public static void main(String[] args) {
         new File("./data").mkdirs();
-        SpringApplication.run(BrewtargetWebApplication.class, args);
+        SpringApplication.run(BeerbrewWebApplication.class, args);
     }
 }

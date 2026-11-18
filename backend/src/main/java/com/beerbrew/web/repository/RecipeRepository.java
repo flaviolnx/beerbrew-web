@@ -1,6 +1,6 @@
-package com.brewtarget.web.repository;
+package com.beerbrew.web.repository;
 
-import com.brewtarget.web.model.Recipe;
+import com.beerbrew.web.model.Recipe;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface RecipeRepository extends JpaRepository<Recipe, Long> {
