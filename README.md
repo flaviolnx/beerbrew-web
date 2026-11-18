@@ -1,7 +1,7 @@
 # 🍺 Yuki & Bombs Crew Brew C.O. (`beerbrew-web`)
 
 <p align="center">
-  <img src="images/logo.png"  width="500">
+  <img src="images/logo.jpg"  width="500">
 </p>
 
 **Yuki & Bombs Crew Brew C.O.** is a full-stack brewing studio and recipe formulation web application built with **Java (Spring Boot 3.4)**, **SQLite**, and **React 19 (TypeScript)**, packaged as a self-contained multi-stage container running on **`registry.fedoraproject.org/fedora:latest`**.
