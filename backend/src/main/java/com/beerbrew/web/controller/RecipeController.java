@@ -104,15 +104,50 @@ public class RecipeController {
     @GetMapping("/styles")
     public List<BjcpStyle> getStyles() {
         List<BjcpStyle> list = styleRepo.findAll();
-        list.sort(Comparator.comparing(BjcpStyle::getCategoryNumber, Comparator.nullsLast(String::compareToIgnoreCase)));
+        list.sort(Comparator
+                .comparing(BjcpStyle::getCategoryNumber, Comparator.nullsLast(String::compareToIgnoreCase))
+                .thenComparing(BjcpStyle::getName, Comparator.nullsLast(String::compareToIgnoreCase)));
         return list;
     }
 
     @PostMapping("/styles")
-    public BjcpStyle saveStyle(@RequestBody BjcpStyle style) { return styleRepo.save(style); }
+    public BjcpStyle saveStyle(@RequestBody BjcpStyle incoming) {
+        if (incoming.getId() != null) {
+            return styleRepo.findById(incoming.getId())
+                    .map(existing -> {
+                        existing.setCategoryNumber(incoming.getCategoryNumber());
+                        existing.setStyleLetter(incoming.getStyleLetter());
+                        existing.setName(incoming.getName());
+                        existing.setGuide(incoming.getGuide() != null ? incoming.getGuide() : "BJCP 2021");
+                        existing.setOgMin(incoming.getOgMin());
+                        existing.setOgMax(incoming.getOgMax());
+                        existing.setFgMin(incoming.getFgMin());
+                        existing.setFgMax(incoming.getFgMax());
+                        existing.setIbuMin(incoming.getIbuMin());
+                        existing.setIbuMax(incoming.getIbuMax());
+                        existing.setSrmMin(incoming.getSrmMin());
+                        existing.setSrmMax(incoming.getSrmMax());
+                        existing.setAbvMin(incoming.getAbvMin());
+                        existing.setAbvMax(incoming.getAbvMax());
+                        existing.setNotes(incoming.getNotes());
+                        return styleRepo.saveAndFlush(existing);
+                    })
+                    .orElseGet(() -> styleRepo.saveAndFlush(incoming));
+        }
+        return styleRepo.saveAndFlush(incoming);
+    }
+
+    @PutMapping("/styles/{id}")
+    public BjcpStyle updateStyle(@PathVariable Long id, @RequestBody BjcpStyle incoming) {
+        incoming.setId(id);
+        return saveStyle(incoming);
+    }
 
     @DeleteMapping("/styles/{id}")
-    public void deleteStyle(@PathVariable Long id) { styleRepo.deleteById(id); }
+    public void deleteStyle(@PathVariable Long id) {
+        styleRepo.deleteById(id);
+        styleRepo.flush();
+    }
 
     @GetMapping("/inventory")
     public List<InventoryItem> getInventory() { return inventoryRepo.findAll(); }

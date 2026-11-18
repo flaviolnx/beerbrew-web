@@ -136,10 +136,13 @@ export default function App() {
   const [styleForm, setStyleForm] = useState<BjcpStyle>(emptyStyle);
   const [styleFilter, setStyleFilter] = useState('');
 
+  const [styleStatusMsg, setStyleStatusMsg] = useState<string | null>(null);
+
   const loadAll = async () => {
+    const opts: RequestInit = { cache: 'no-store' };
     const [rRes, eRes, wRes, sRes, iRes, bRes] = await Promise.all([
-      fetch(`${API}/recipes`), fetch(`${API}/equipment`), fetch(`${API}/waters`),
-      fetch(`${API}/styles`), fetch(`${API}/inventory`), fetch(`${API}/brew-notes`),
+      fetch(`${API}/recipes`, opts), fetch(`${API}/equipment`, opts), fetch(`${API}/waters`, opts),
+      fetch(`${API}/styles`, opts), fetch(`${API}/inventory`, opts), fetch(`${API}/brew-notes`, opts),
     ]);
     const rData = await rRes.json();
     setRecipes(rData);
@@ -221,14 +224,17 @@ export default function App() {
     }
   };
 
-  const matchedStyle = stylesList.find((s) => current.style?.includes(s.name) || current.style?.startsWith(s.categoryNumber));
+  const matchedStyle =
+    stylesList.find((s) => `${s.categoryNumber} - ${s.name}` === current.style) ||
+    stylesList.find((s) => current.style?.toLowerCase() === s.name.toLowerCase()) ||
+    stylesList.find((s) => current.style?.startsWith(`${s.categoryNumber} `));
   const totalGrainKg = current.fermentables.reduce((acc, f) => acc + (f.type === 'Grain' ? f.amountKg : 0), 0);
 
   return (
     <div style={{ display: 'flex', fontFamily: 'system-ui, -apple-system, sans-serif', height: '100vh', color: '#1f2937' }}>
       <aside style={{ width: 280, background: '#1e293b', color: '#f8fafc', display: 'flex', flexDirection: 'column', padding: 16 }}>
         <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, color: '#fbbf24' }}>🍺 Y&B Crew Beer C.O.</div>
-        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>Brewing Studio</div>
+        <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 16 }}>Brewing Studio · SQLite</div>
 
         <nav style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 16 }}>
           {[
@@ -698,26 +704,44 @@ export default function App() {
                   <input style={{ display: 'block', width: '100%', padding: 6, marginTop: 4 }} placeholder="Aroma, flavor, mouthfeel notes..." value={styleForm.notes} onChange={(e) => setStyleForm({ ...styleForm, notes: e.target.value })} />
                 </label>
               </div>
-              <div style={{ display: 'flex', gap: 8 }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button
+                  type="button"
                   onClick={async () => {
-                    if (!styleForm.name.trim()) return;
-                    await fetch(`${API}/styles`, {
-                      method: 'POST',
+                    if (!styleForm.name.trim()) {
+                      alert('Please enter a Style Name.');
+                      return;
+                    }
+                    const isEdit = Boolean(styleForm.id);
+                    const url = isEdit ? `${API}/styles/${styleForm.id}` : `${API}/styles`;
+                    const method = isEdit ? 'PUT' : 'POST';
+                    const res = await fetch(url, {
+                      method,
                       headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify(styleForm),
                     });
-                    setStyleForm(emptyStyle);
-                    loadAll();
+                    if (res.ok) {
+                      const saved: BjcpStyle = await res.json();
+                      setStyleStatusMsg(isEdit
+                        ? `Updated style "${saved.categoryNumber} - ${saved.name}".`
+                        : `Added new style "${saved.categoryNumber} - ${saved.name}".`);
+                      setStyleForm(emptyStyle);
+                      await loadAll();
+                    } else {
+                      alert('Error saving beer style (HTTP ' + res.status + ').');
+                    }
                   }}
                   style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
                 >
                   {styleForm.id ? 'Update Beer Style' : '+ Save Beer Style'}
                 </button>
                 {styleForm.id && (
-                  <button onClick={() => setStyleForm(emptyStyle)} style={{ padding: '8px 14px', background: '#e2e8f0', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+                  <button type="button" onClick={() => setStyleForm(emptyStyle)} style={{ padding: '8px 14px', background: '#e2e8f0', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
                     Cancel Edit
                   </button>
+                )}
+                {styleStatusMsg && (
+                  <span style={{ color: '#15803d', fontWeight: 600, fontSize: 13 }}>{styleStatusMsg}</span>
                 )}
               </div>
             </div>
@@ -758,9 +782,34 @@ export default function App() {
                           <span style={{ display: 'inline-block', width: 16, height: 16, borderRadius: 3, background: srmToHex(s.srmMax), border: '1px solid #cbd5e1', marginLeft: 2 }} />
                         </td>
                         <td style={{ display: 'flex', gap: 6, padding: '6px 0' }}>
-                          <button onClick={() => { setCurrent({ ...current, style: `${s.categoryNumber} - ${s.name}` }); setNavSection('recipe'); }}>Use</button>
-                          <button onClick={() => setStyleForm(s)}>Edit</button>
-                          <button onClick={async () => { if (!s.id) return; await fetch(`${API}/styles/${s.id}`, { method: 'DELETE' }); loadAll(); }}>✕</button>
+                          <button type="button" onClick={() => { setCurrent({ ...current, style: `${s.categoryNumber} - ${s.name}` }); setNavSection('recipe'); }}>Use</button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStyleStatusMsg(null);
+                              setStyleForm({
+                                id: s.id,
+                                categoryNumber: s.categoryNumber || '',
+                                name: s.name || '',
+                                guide: s.guide || 'BJCP 2021',
+                                ogMin: s.ogMin ?? 1.045,
+                                ogMax: s.ogMax ?? 1.060,
+                                fgMin: s.fgMin ?? 1.008,
+                                fgMax: s.fgMax ?? 1.015,
+                                ibuMin: s.ibuMin ?? 20,
+                                ibuMax: s.ibuMax ?? 45,
+                                srmMin: s.srmMin ?? 4,
+                                srmMax: s.srmMax ?? 12,
+                                abvMin: s.abvMin ?? 4.5,
+                                abvMax: s.abvMax ?? 6.5,
+                                notes: s.notes || '',
+                              });
+                              document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+                            }}
+                          >
+                            Edit
+                          </button>
+                          <button type="button" onClick={async () => { if (!s.id) return; await fetch(`${API}/styles/${s.id}`, { method: 'DELETE' }); await loadAll(); }}>✕</button>
                         </td>
                       </tr>
                     ))}
