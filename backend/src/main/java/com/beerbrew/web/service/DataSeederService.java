@@ -2,8 +2,10 @@ package com.beerbrew.web.service;
 
 import com.beerbrew.web.model.*;
 import com.beerbrew.web.repository.*;
-import jakarta.annotation.PostConstruct;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -31,7 +33,8 @@ public class DataSeederService {
         this.mathService = mathService;
     }
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
+    @Transactional
     public void seedDefaults() {
         if (equipmentRepo.count() == 0) {
             EquipmentProfile biab = new EquipmentProfile();
@@ -126,14 +129,19 @@ public class DataSeederService {
         );
 
         List<BjcpStyle> existing = styleRepo.findAll();
+        int addedCount = 0;
         for (BjcpStyle candidate : catalog) {
             boolean exists = existing.stream().anyMatch(e ->
-                    e.getCategoryNumber().equalsIgnoreCase(candidate.getCategoryNumber()) &&
-                    e.getName().equalsIgnoreCase(candidate.getName()));
+                    e.getName() != null && e.getName().equalsIgnoreCase(candidate.getName()) &&
+                    ((e.getCategoryNumber() == null && candidate.getCategoryNumber() == null) ||
+                     (e.getCategoryNumber() != null && e.getCategoryNumber().equalsIgnoreCase(candidate.getCategoryNumber()))));
             if (!exists) {
                 styleRepo.save(candidate);
+                addedCount++;
             }
         }
+        styleRepo.flush();
+        System.out.println("[DataSeederService] BJCP Styles in SQLite: " + styleRepo.count() + " (newly seeded: " + addedCount + ")");
 
         if (inventoryRepo.count() == 0) {
             inventoryRepo.saveAll(List.of(
