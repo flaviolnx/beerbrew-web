@@ -318,13 +318,14 @@ export default function App() {
               <select
                 value={current.style}
                 onChange={(e) => setCurrent({ ...current, style: e.target.value })}
-                style={{ padding: 8, borderRadius: 6, border: '1px solid #cbd5e1' }}
+                title={`Select Beer Style (${stylesList.length} loaded)`}
+                style={{ padding: 8, borderRadius: 6, border: '1px solid #cbd5e1', background: '#fff', color: '#111827', minWidth: 230 }}
               >
                 {!stylesList.some((s) => `${s.categoryNumber} - ${s.name}` === current.style) && (
-                  <option value={current.style}>{current.style}</option>
+                  <option value={current.style} style={{ color: '#111827', background: '#fff' }}>{current.style}</option>
                 )}
                 {stylesList.map((s) => (
-                  <option key={s.id} value={`${s.categoryNumber} - ${s.name}`}>
+                  <option key={s.id} value={`${s.categoryNumber} - ${s.name}`} style={{ color: '#111827', background: '#fff' }}>
                     {s.categoryNumber} - {s.name}
                   </option>
                 ))}
@@ -728,7 +729,8 @@ export default function App() {
                       setStyleForm(emptyStyle);
                       await loadAll();
                     } else {
-                      alert('Error saving beer style (HTTP ' + res.status + ').');
+                      const errText = await res.text();
+                      alert('Error saving beer style (HTTP ' + res.status + '): ' + errText);
                     }
                   }}
                   style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
