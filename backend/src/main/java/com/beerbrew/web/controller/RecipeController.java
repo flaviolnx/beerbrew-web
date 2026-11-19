@@ -24,6 +24,8 @@ public class RecipeController {
     private final BjcpStyleRepository styleRepo;
     private final BrewNoteRepository brewNoteRepo;
     private final InventoryItemRepository inventoryRepo;
+    private final FermentationProfileRepository fermRepo;
+    private final CarbonationProfileRepository carbRepo;
     private final BrewMathService mathService;
     private final BeerXmlService beerXmlService;
 
@@ -33,6 +35,8 @@ public class RecipeController {
                             BjcpStyleRepository styleRepo,
                             BrewNoteRepository brewNoteRepo,
                             InventoryItemRepository inventoryRepo,
+                            FermentationProfileRepository fermRepo,
+                            CarbonationProfileRepository carbRepo,
                             BrewMathService mathService,
                             BeerXmlService beerXmlService) {
         this.recipeRepo = recipeRepo;
@@ -41,6 +45,8 @@ public class RecipeController {
         this.styleRepo = styleRepo;
         this.brewNoteRepo = brewNoteRepo;
         this.inventoryRepo = inventoryRepo;
+        this.fermRepo = fermRepo;
+        this.carbRepo = carbRepo;
         this.mathService = mathService;
         this.beerXmlService = beerXmlService;
     }
@@ -147,6 +153,56 @@ public class RecipeController {
     public void deleteStyle(@PathVariable Long id) {
         styleRepo.deleteById(id);
         styleRepo.flush();
+    }
+
+    // --- Fermentation Profiles ---
+    @GetMapping("/fermentation-profiles")
+    public List<FermentationProfile> getFermentationProfiles() {
+        return fermRepo.findAll();
+    }
+
+    @PostMapping("/fermentation-profiles")
+    public FermentationProfile saveFermentationProfile(@RequestBody FermentationProfile fp) {
+        if (fp.getSteps() != null) {
+            for (int i = 0; i < fp.getSteps().size(); i++) {
+                fp.getSteps().get(i).setStepOrder(i + 1);
+            }
+        }
+        return fermRepo.saveAndFlush(fp);
+    }
+
+    @DeleteMapping("/fermentation-profiles/{id}")
+    public void deleteFermentationProfile(@PathVariable Long id) {
+        fermRepo.deleteById(id);
+        fermRepo.flush();
+    }
+
+    // --- Carbonation Profiles ---
+    @GetMapping("/carbonation-profiles")
+    public List<CarbonationProfile> getCarbonationProfiles() {
+        return carbRepo.findAll();
+    }
+
+    @PostMapping("/carbonation-profiles")
+    public CarbonationProfile saveCarbonationProfile(@RequestBody CarbonationProfile cp) {
+        if ("Forced".equalsIgnoreCase(cp.getType())) {
+            double psi = mathService.calculateForcedCarbonationPsi(cp.getTemperatureC(), cp.getTargetCo2Volumes());
+            cp.setKegPressurePsi(Math.round(psi * 10.0) / 10.0);
+            cp.setKegPressureBar(Math.round((psi * 0.0689476) * 100.0) / 100.0);
+            cp.setPrimingRateGramsPerLiter(0.0);
+        } else {
+            double totalGrams = mathService.calculatePrimingSugarGramsByAgent(1.0, cp.getTemperatureC(), cp.getTargetCo2Volumes(), cp.getPrimingAgent());
+            cp.setPrimingRateGramsPerLiter(Math.round(totalGrams * 100.0) / 100.0);
+            cp.setKegPressurePsi(0.0);
+            cp.setKegPressureBar(0.0);
+        }
+        return carbRepo.saveAndFlush(cp);
+    }
+
+    @DeleteMapping("/carbonation-profiles/{id}")
+    public void deleteCarbonationProfile(@PathVariable Long id) {
+        carbRepo.deleteById(id);
+        carbRepo.flush();
     }
 
     @GetMapping("/inventory")

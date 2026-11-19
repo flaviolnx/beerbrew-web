@@ -100,9 +100,30 @@ public class BrewMathService {
     }
 
     public double calculatePrimingSugarGrams(double batchLiters, double beerTempC, double targetCo2Volumes) {
+        return calculatePrimingSugarGramsByAgent(batchLiters, beerTempC, targetCo2Volumes, "Corn Sugar (Dextrose)");
+    }
+
+    public double calculatePrimingSugarGramsByAgent(double batchLiters, double beerTempC, double targetCo2Volumes, String agent) {
         double residualCo2 = 3.0378 - (0.050062 * beerTempC) + (0.00026555 * Math.pow(beerTempC, 2));
         double neededCo2 = Math.max(0.0, targetCo2Volumes - residualCo2);
-        return neededCo2 * batchLiters * 4.0;
+        double factor = switch (agent == null ? "" : agent) {
+            case "Table Sugar (Sucrose)" -> 3.82;
+            case "Dry Malt Extract (DME)" -> 5.10;
+            default -> 4.0; // Corn Sugar (Dextrose)
+        };
+        return neededCo2 * batchLiters * factor;
+    }
+
+    // Standard Zahm & Nagel / ASBC Forced Carbonation Pressure (PSI) from Temp (°C) and Target CO2 Volumes
+    public double calculateForcedCarbonationPsi(double tempC, double targetCo2Volumes) {
+        double tempF = (tempC * 9.0 / 5.0) + 32.0;
+        double psi = -16.6999
+                - (0.0101059 * tempF)
+                + (0.00116512 * Math.pow(tempF, 2))
+                + (0.173354 * tempF * targetCo2Volumes)
+                + (4.24267 * targetCo2Volumes)
+                - (0.0684226 * Math.pow(targetCo2Volumes, 2));
+        return Math.max(0.0, psi);
     }
 
     public double correctHydrometerReading(double measuredSg, double sampleTempC, double calibrationTempC) {

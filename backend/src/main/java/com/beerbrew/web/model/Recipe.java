@@ -63,6 +63,14 @@ public class Recipe {
     @JoinColumn(name = "recipe_id")
     private List<MashStep> mashSteps = new ArrayList<>();
 
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    @JoinColumn(name = "recipe_id")
+    private List<FermentationStep> fermentationSteps = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "carbonation_id")
+    private CarbonationProfile carbonationProfile;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getName() { return name; }
@@ -115,4 +123,8 @@ public class Recipe {
     public void setMiscs(List<Misc> miscs) { this.miscs = miscs; }
     public List<MashStep> getMashSteps() { return mashSteps; }
     public void setMashSteps(List<MashStep> mashSteps) { this.mashSteps = mashSteps; }
+    public List<FermentationStep> getFermentationSteps() { return fermentationSteps; }
+    public void setFermentationSteps(List<FermentationStep> fermentationSteps) { this.fermentationSteps = fermentationSteps; }
+    public CarbonationProfile getCarbonationProfile() { return carbonationProfile; }
+    public void setCarbonationProfile(CarbonationProfile carbonationProfile) { this.carbonationProfile = carbonationProfile; }
 }
