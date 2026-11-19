@@ -1078,11 +1078,14 @@ export default function App() {
                   setHydroOut((await r.json()).correctedSg);
                 }}>Correct SG Reading</button>
                 {hydroOut !== null && <strong>Corrected Specific Gravity: {hydroOut.toFixed(3)} SG</strong>}
-              </div>
+               </div>
             </div>
           </div>
         )}
+        <footer style={{ marginTop: 32, paddingTop: 14, borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: 12, color: '#64748b' }}>
+          © {new Date().getFullYear()} Y&amp;B Crew Beer C.O. — All rights reserved.
+        </footer>
       </main>
     </div>
   );
-}
+}            
