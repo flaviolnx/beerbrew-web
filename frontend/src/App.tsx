@@ -244,7 +244,7 @@ export default function App() {
   return (
     <div style={{ display: 'flex', fontFamily: 'system-ui, -apple-system, sans-serif', height: '100vh', color: '#1f2937' }}>
       <aside style={{ width: 285, background: '#1e293b', color: '#f8fafc', display: 'flex', flexDirection: 'column', padding: 16 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, color: '#fbbf24' }}>🍺 Yuki & Bomb's Crew Brew CO.</div>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4, color: '#fbbf24' }}>🍺 Yuki & Bomb's Crew Brew CO.</div>
         <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 12 }}>{t('subtitle')}</div>
 
         {/* Language Selector */}
