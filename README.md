@@ -1,10 +1,10 @@
-# 🍺 Yuki & Bombs Crew Brew C.O. (`beerbrew-web`)
+# 🍺 Yuki & Bomb's Crew Brew C.O. (`beerbrew-web`)
 
 <p align="center">
   <img src="images/logo.png"  width="500">
 </p>
 
-**Yuki & Bombs Crew Brew C.O.** is a full-stack brewing studio and recipe formulation web application 
+**Yuki & Bomb's Crew Brew C.O.** is a full-stack brewing studio and recipe formulation web application 
 ---
 
 ## ✨ Features
