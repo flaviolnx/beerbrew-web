@@ -1157,7 +1157,8 @@ export default function App() {
         </div>
 
         <footer style={{ marginTop: 32, paddingTop: 14, borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: 12, color: '#64748b', position: 'relative', zIndex: 1 }}>
-          © {new Date().getFullYear()} Y&amp;B Crew Beer C.O. — {t('footerRights')}
+          © {new Date().getFullYear()} Y&amp;B Crew Beer C.O. — {t('footerRights')} / 
+          Developed By @flaviolnx https://github.com/flaviolnx/beerbrew-web.
         </footer>
       </main>
     </div>
