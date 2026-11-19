@@ -28,7 +28,7 @@
   * Spanish
   * Portuguese
   
-![App Screenshot](images/screenshot.png)
+![App Screenshot](images/Screenshot.png)
 
 ---
 
