@@ -244,7 +244,7 @@ export default function App() {
   return (
     <div style={{ display: 'flex', fontFamily: 'system-ui, -apple-system, sans-serif', height: '100vh', color: '#1f2937' }}>
       <aside style={{ width: 285, background: '#1e293b', color: '#f8fafc', display: 'flex', flexDirection: 'column', padding: 16 }}>
-        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, color: '#fbbf24' }}>🍺 Y&B Crew Beer C.O.</div>
+        <div style={{ fontSize: 20, fontWeight: 800, marginBottom: 4, color: '#fbbf24' }}>🍺 Yuki & Bomb's Crew Brew CO.</div>
         <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 12 }}>{t('subtitle')}</div>
 
         {/* Language Selector */}
@@ -347,8 +347,28 @@ export default function App() {
         </div>
       </aside>
 
-      <main style={{ flex: 1, padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ flex: 1 }}>
+      <main style={{ flex: 1, padding: 24, overflowY: 'auto', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+        <style>{`@media print { .no-print-watermark { display: none !important; } }`}</style>
+        <div
+          aria-hidden="true"
+          className="no-print-watermark"
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: 'calc(50% + 142px)',
+            transform: 'translate(-50%, -50%)',
+            width: 420,
+            height: 420,
+            backgroundImage: "url('/images/logo.png')",
+            backgroundRepeat: 'no-repeat',
+            backgroundPosition: 'center',
+            backgroundSize: 'contain',
+            opacity: 0.07,
+            pointerEvents: 'none',
+            zIndex: 0,
+          }}
+        />
+        <div style={{ flex: 1, position: 'relative', zIndex: 1 }}>
           {navSection === 'recipe' && (
             <>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', marginBottom: 16 }}>
@@ -1136,8 +1156,9 @@ export default function App() {
           )}
         </div>
 
-        <footer style={{ marginTop: 32, paddingTop: 14, borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: 12, color: '#64748b' }}>
-          © {new Date().getFullYear()} Y&amp;B Crew Beer C.O. — {t('footerRights')}
+        <footer style={{ marginTop: 32, paddingTop: 14, borderTop: '1px solid #e2e8f0', textAlign: 'center', fontSize: 12, color: '#64748b', position: 'relative', zIndex: 1 }}>
+          © {new Date().getFullYear()} Y&amp;B Crew Beer C.O. — {t('footerRights')} / 
+          Developed By @flaviolnx https://github.com/flaviolnx/beerbrew-web.
         </footer>
       </main>
     </div>
