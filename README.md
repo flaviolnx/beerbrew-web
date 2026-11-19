@@ -9,25 +9,26 @@
 
 ## ✨ Features
 
-* **Recipe Formulation & Live Brewing Math:**
-  * Real-time calculation of **Original Gravity (OG)**, **Final Gravity (FG)**, **ABV**, **IBU** (selectable **Tinseth** or **Rager** formulas with pellet utilization adjustment, First Wort, and Whirlpool handling), **SRM Beer Color** (Morey equation with live hex swatch), and **Calories per 355 ml**.
-  * Support for **Fermentables** (Grain, Sugar, Liquid/Dry Extract), **Hops**, **Yeasts**, **Miscs & Water Salts**, and multi-step **Mash Schedules** (Infusion, Temperature, Decoction).
-* **BJCP 2021 & Custom Beer Style Library:**
-  * Pre-seeded with **44 BJCP 2021 styles** (Lagers, IPAs, Stouts, Wheat beers, Belgian ales, Sours) plus full CRUD support to create, search, and edit custom beer styles.
-  * Live green/red vital range indicators comparing your recipe metrics against the selected style's guidelines.
-* **Equipment & Water Chemistry Profiles:**
-  * Manage custom **Equipment Profiles** (batch size, boil time, evaporation rate, kettle/lauter deadspace, trub/chiller loss, grain absorption, and brewhouse efficiency) that auto-populate recipe parameters.
-  * Manage **Water Ion Profiles** ($\text{Ca}^{2+}$, $\text{Mg}^{2+}$, $\text{Na}^{+}$, $\text{Cl}^{-}$, $\text{SO}_4^{2-}$, $\text{HCO}_3^{-}$, pH) with automatic $\text{SO}_4:\text{Cl}$ ratio and flavor balance classification.
-* **Fermentation & Carbonation Profiles:**
-  * Create and assign multi-stage Fermentation Profiles with temperature holds, ramps, conditioning stages, duration in days, and dry hop addition schedules (pre-seeded with Ale, Hazy NEIPA, and German Lager schedules)[cite: 18, 29].
-  * Create and assign Carbonation Profiles supporting both **Forced Carbonation (Keg / $\text{CO}_2$)** (auto-calculating regulator pressure in PSI and bar via the Zahm & Nagel / ASBC formula) and **Priming Sugar (Bottle / Keg)** (auto-calculating g/L and total batch grams for Dextrose, Sucrose, and DME)[cite: 17, 19, 29].
-* **Ingredient Inventory & Brew Day Tracking:**
-  * Track on-hand stock for malts, hops, yeasts, and adjuncts, quick-add items into recipes, and log sessions via **"🍺 Brew It (Deduct Stock)"** to automatically subtract used ingredients and record Brew Notes[cite: 17, 29].
-* **Brewing Calculators & BeerXML 1.0:**
-  * Built-in calculators for Mash Strike Water Temperature, Refractometer Alcohol Correction (Sean Terrill cubic formula), Priming Sugar Carbonation, and Hydrometer Temperature Correction[cite: 17, 19, 29].
-  * Full BeerXML 1.0 import and export, plus a print-ready Brew Day Sheet including mash, fermentation, and carbonation instructions[cite: 17, 29].
-* **Multilingual Web Interface:**
-  * Instant UI language switcher with persistent browser selection for **English (🇺🇸 EN)**, **Portuguese (🇧🇷 PT)**, and **Spanish (🇪🇸 ES)**[cite: 29, 68].
+- **Recipe Formulation & Live Brewing Math:**
+  - Real-time calculation of **Original Gravity (OG)**, **Final Gravity (FG)**, **ABV**, **IBU** (selectable **Tinseth** or **Rager** formulas with pellet utilization adjustment, First Wort, and Whirlpool handling), **SRM Beer Color** (Morey equation with live hex swatch), and **Calories per 355 ml**.
+  - Support for **Fermentables** (Grain, Sugar, Liquid/Dry Extract), **Hops**, **Yeasts**, **Miscs & Water Salts**, and multi-step **Mash Schedules** (Infusion, Temperature, Decoction).
+  - Recipe-bar dropdown presets for **Equipment**, **Fermentation Profiles**, and **Carbonation Profiles** that auto-populate recipe parameters and update the printable Brew Day Sheet.
+- **BJCP 2021 & Custom Beer Style Library:**
+  - Pre-seeded with **44 BJCP 2021 styles** (Lagers, IPAs, Stouts, Wheat beers, Belgian ales, Sours) plus full CRUD support to create, search, and edit custom beer styles.
+  - Live green/red vital range indicators comparing your recipe metrics against the selected style's guidelines.
+- **Equipment & Water Chemistry Profiles:**
+  - Manage custom **Equipment Profiles** (batch size, boil time, evaporation rate, kettle/lauter deadspace, trub/chiller loss, grain absorption, and brewhouse efficiency) that auto-populate recipe parameters.
+  - Manage **Water Ion Profiles** ($\text{Ca}^{2+}$, $\text{Mg}^{2+}$, $\text{Na}^{+}$, $\text{Cl}^{-}$, $\text{SO}_4^{2-}$, $\text{HCO}_3^{-}$, pH) with automatic $\text{SO}_4:\text{Cl}$ ratio and flavor balance classification.
+- **Fermentation & Carbonation Profiles:**
+  - Create and assign multi-stage **Fermentation Profiles** with temperature holds, ramps, conditioning stages, duration in days, and dry hop addition schedules (pre-seeded with Ale, Hazy NEIPA, and German Lager schedules).
+  - Create and assign **Carbonation Profiles** supporting both **Forced Carbonation (Keg / $\text{CO}_2$)** (auto-calculating regulator pressure in PSI and bar via the Zahm & Nagel / ASBC formula) and **Priming Sugar (Bottle / Keg)** (auto-calculating g/L and total batch grams for Dextrose, Sucrose, and DME).
+- **Ingredient Inventory & Brew Day Tracking:**
+  - Track on-hand stock for malts, hops, yeasts, and adjuncts, quick-add items into recipes, and log sessions via **"🍺 Brew It (Deduct Stock)"** to automatically subtract used ingredients and record Brew Notes.
+- **Brewing Calculators & BeerXML 1.0:**
+  - Built-in calculators for Mash Strike Water Temperature, Refractometer Alcohol Correction (Sean Terrill cubic formula), Priming Sugar Carbonation, and Hydrometer Temperature Correction.
+  - Full BeerXML 1.0 import and export, plus a print-ready Brew Day Sheet including mash, fermentation, and carbonation instructions.
+- **Multilingual Web Interface:**
+  - Instant UI language switcher with persistent browser selection for **English (🇺🇸 EN)**, **Portuguese (🇧🇷 PT)**, and **Spanish (🇪🇸 ES)**.
   
 ![App Screenshot](images/Screenshot.png)
 
