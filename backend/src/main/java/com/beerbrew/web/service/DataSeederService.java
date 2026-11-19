@@ -17,6 +17,8 @@ public class DataSeederService {
     private final BjcpStyleRepository styleRepo;
     private final InventoryItemRepository inventoryRepo;
     private final RecipeRepository recipeRepo;
+    private final FermentationProfileRepository fermRepo;
+    private final CarbonationProfileRepository carbRepo;
     private final BrewMathService mathService;
 
     public DataSeederService(EquipmentProfileRepository equipmentRepo,
@@ -24,12 +26,16 @@ public class DataSeederService {
                              BjcpStyleRepository styleRepo,
                              InventoryItemRepository inventoryRepo,
                              RecipeRepository recipeRepo,
+                             FermentationProfileRepository fermRepo,
+                             CarbonationProfileRepository carbRepo,
                              BrewMathService mathService) {
         this.equipmentRepo = equipmentRepo;
         this.waterRepo = waterRepo;
         this.styleRepo = styleRepo;
         this.inventoryRepo = inventoryRepo;
         this.recipeRepo = recipeRepo;
+        this.fermRepo = fermRepo;
+        this.carbRepo = carbRepo;
         this.mathService = mathService;
     }
 
@@ -165,6 +171,48 @@ public class DataSeederService {
             ));
         }
 
+        if (fermRepo.count() == 0) {
+            FermentationProfile aleStd = new FermentationProfile();
+            aleStd.setName("Ale Standard + Dry Hop & Cold Crash");
+            aleStd.setDescription("Clean American/British Ale fermentation with dry hop charge and cold crash.");
+            aleStd.setSteps(List.of(
+                fstep(1, "Primary Fermentation", "Hold", 5, 19.0, 19.0, "", "Pitch healthy yeast at 19°C"),
+                fstep(2, "Diacetyl Rest & Dry Hop", "Ramp", 4, 19.0, 21.0, "Dry Hop Charge (Day 5)", "Ramp to 21°C to finish attenuation and extract hop aroma"),
+                fstep(3, "Cold Crash", "Ramp", 3, 21.0, 2.0, "", "Drop to 2°C for clarity before packaging")
+            ));
+
+            FermentationProfile neipa = new FermentationProfile();
+            neipa.setName("Hazy NEIPA Biotransformation Schedule");
+            neipa.setDescription("Two-stage dry hop schedule (active fermentation + post-fermentation).");
+            neipa.setSteps(List.of(
+                fstep(1, "Active Primary + Biotransformation DH", "Hold", 3, 20.0, 20.0, "Dry Hop #1 (Day 2 High Krausen)", "Biotransformation hop addition"),
+                fstep(2, "Finish & Second Dry Hop", "Ramp", 4, 20.0, 21.5, "Dry Hop #2 (Day 4)", "Flush headspace with CO2"),
+                fstep(3, "Soft Cold Crash", "Ramp", 2, 21.5, 4.0, "", "Drop to 4°C to settle hop matter")
+            ));
+
+            FermentationProfile lager = new FermentationProfile();
+            lager.setName("Classic German Lager (Fast Ramp)");
+            lager.setDescription("Cool lager fermentation with diacetyl rest and cold lagering.");
+            lager.setSteps(List.of(
+                fstep(1, "Primary Lager Fermentation", "Hold", 7, 10.0, 10.0, "", "Ferment until ~75% attenuation"),
+                fstep(2, "Diacetyl Rest Ramp", "Ramp", 3, 10.0, 16.0, "", "Raise temperature to clean up diacetyl"),
+                fstep(3, "Cold Lagering", "Ramp", 14, 16.0, 1.0, "", "Condition cold for crisp lager profile")
+            ));
+
+            fermRepo.saveAll(List.of(aleStd, neipa, lager));
+        }
+
+        if (carbRepo.count() == 0) {
+            carbRepo.saveAll(List.of(
+                carb("Keg Forced Carbonation — Standard Ale / IPA (2.4 Vol)", "Forced", 2.4, 4.0, "None (CO2 Cylinder)", 0.0, 11.3, 0.78, 5, "Set regulator to ~11.3 PSI at 4°C for 5–7 days."),
+                carb("Keg Forced Carbonation — Pilsner / Crisp Lager (2.6 Vol)", "Forced", 2.6, 3.0, "None (CO2 Cylinder)", 0.0, 12.2, 0.84, 7, "Crisp, lively carbonation at 3°C."),
+                carb("Keg Forced Carbonation — British Ale / Stout (1.9 Vol)", "Forced", 1.9, 6.0, "None (CO2 Cylinder)", 0.0, 7.6, 0.52, 5, "Lower cask-style carbonation."),
+                carb("Bottle Conditioning — Corn Sugar / Dextrose (2.4 Vol)", "Priming", 2.4, 20.0, "Corn Sugar (Dextrose)", 6.2, 0.0, 0.0, 14, "Dissolve dextrose in boiled water, bottle and store at 20°C for 2 weeks."),
+                carb("Bottle Conditioning — Table Sugar / Sucrose (2.4 Vol)", "Priming", 2.4, 20.0, "Table Sugar (Sucrose)", 5.9, 0.0, 0.0, 14, "Standard sucrose priming for 2.4 volumes CO2 at 20°C."),
+                carb("Bottle Conditioning — Wheat / Belgian High Carb (3.0 Vol)", "Priming", 3.0, 20.0, "Corn Sugar (Dextrose)", 8.6, 0.0, 0.0, 14, "Use heavy-duty bottles rated for higher pressure.")
+            ));
+        }
+
         if (recipeRepo.count() == 0) {
             Recipe starter = new Recipe();
             starter.setName("Sierra Nevada Style Pale Ale");
@@ -273,5 +321,22 @@ public class DataSeederService {
         InventoryItem i = new InventoryItem();
         i.setCategory(cat); i.setName(name); i.setQuantity(qty); i.setUnit(unit); i.setAlphaOrColorOrAtten(spec);
         return i;
+    }
+
+    private FermentationStep fstep(int order, String name, String type, double days, double startC, double endC, String dryHop, String notes) {
+        FermentationStep s = new FermentationStep();
+        s.setStepOrder(order); s.setName(name); s.setStepType(type);
+        s.setDurationDays(days); s.setStartTempC(startC); s.setEndTempC(endC);
+        s.setDryHopAddition(dryHop); s.setNotes(notes);
+        return s;
+    }
+
+    private CarbonationProfile carb(String name, String type, double co2, double tempC, String agent, double gPerL, double psi, double bar, int days, String notes) {
+        CarbonationProfile c = new CarbonationProfile();
+        c.setName(name); c.setType(type); c.setTargetCo2Volumes(co2); c.setTemperatureC(tempC);
+        c.setPrimingAgent(agent); c.setPrimingRateGramsPerLiter(gPerL);
+        c.setKegPressurePsi(psi); c.setKegPressureBar(bar);
+        c.setConditioningDays(days); c.setNotes(notes);
+        return c;
     }
 }

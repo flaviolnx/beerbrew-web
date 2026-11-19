@@ -53,6 +53,39 @@ export interface MashStep {
   rampTimeMinutes: number;
 }
 
+export interface FermentationStep {
+  id?: number;
+  stepOrder: number;
+  name: string;
+  stepType: string; // Hold, Ramp, Conditioning
+  durationDays: number;
+  startTempC: number;
+  endTempC: number;
+  dryHopAddition: string;
+  notes: string;
+}
+
+export interface FermentationProfile {
+  id?: number;
+  name: string;
+  description: string;
+  steps: FermentationStep[];
+}
+
+export interface CarbonationProfile {
+  id?: number;
+  name: string;
+  type: string; // Forced or Priming
+  targetCo2Volumes: number;
+  temperatureC: number;
+  primingAgent: string;
+  primingRateGramsPerLiter: number;
+  kegPressurePsi: number;
+  kegPressureBar: number;
+  conditioningDays: number;
+  notes: string;
+}
+
 export interface EquipmentProfile {
   id?: number;
   name: string;
@@ -140,9 +173,11 @@ export interface Recipe {
   srm: number;
   caloriesPer355ml: number;
   waterProfile?: WaterProfile | null;
+  carbonationProfile?: CarbonationProfile | null;
   fermentables: Fermentable[];
   hops: Hop[];
   yeasts: Yeast[];
   miscs: Misc[];
   mashSteps: MashStep[];
+  fermentationSteps: FermentationStep[];
 }

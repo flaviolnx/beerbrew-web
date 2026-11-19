@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
-  Recipe, EquipmentProfile, WaterProfile, BjcpStyle, BrewNote, InventoryItem
+  Recipe, EquipmentProfile, WaterProfile, BjcpStyle, BrewNote, InventoryItem,
+  FermentationProfile, FermentationStep, CarbonationProfile
 } from './types';
 import { Lang, translations } from './i18n';
 
@@ -36,6 +37,11 @@ const emptyRecipe: Recipe = {
   miscs: [],
   mashSteps: [
     { stepOrder: 1, name: 'Saccharification', type: 'Infusion', infuseAmountLiters: 14, targetTempC: 66, stepTimeMinutes: 60, rampTimeMinutes: 2 },
+  ],
+  fermentationSteps: [
+    { stepOrder: 1, name: 'Primary Fermentation', stepType: 'Hold', durationDays: 5, startTempC: 19, endTempC: 19, dryHopAddition: '', notes: '' },
+    { stepOrder: 2, name: 'Diacetyl Rest & Dry Hop', stepType: 'Ramp', durationDays: 4, startTempC: 19, endTempC: 21, dryHopAddition: '30g Cascade (Day 5)', notes: '' },
+    { stepOrder: 3, name: 'Cold Crash', stepType: 'Ramp', durationDays: 3, startTempC: 21, endTempC: 2, dryHopAddition: '', notes: '' },
   ],
 };
 
@@ -82,14 +88,16 @@ export default function App() {
     localStorage.setItem('yb_lang', newLang);
   };
 
-  const [navSection, setNavSection] = useState<'recipe' | 'styles' | 'inventory' | 'equipment' | 'water' | 'brewnotes' | 'calculators'>('recipe');
-  const [recipeTab, setRecipeTab] = useState<'ingredients' | 'mash' | 'brewsheet'>('ingredients');
+  const [navSection, setNavSection] = useState<'recipe' | 'styles' | 'inventory' | 'equipment' | 'water' | 'fermentation' | 'carbonation' | 'brewnotes' | 'calculators'>('recipe');
+  const [recipeTab, setRecipeTab] = useState<'ingredients' | 'mash' | 'fermentation' | 'brewsheet'>('ingredients');
 
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [current, setCurrent] = useState<Recipe>(emptyRecipe);
   const [equipmentList, setEquipmentList] = useState<EquipmentProfile[]>([]);
   const [waterList, setWaterList] = useState<WaterProfile[]>([]);
   const [stylesList, setStylesList] = useState<BjcpStyle[]>([]);
+  const [fermProfiles, setFermProfiles] = useState<FermentationProfile[]>([]);
+  const [carbProfiles, setCarbProfiles] = useState<CarbonationProfile[]>([]);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [brewNotes, setBrewNotes] = useState<BrewNote[]>([]);
 
@@ -149,18 +157,56 @@ export default function App() {
   const [styleFilter, setStyleFilter] = useState('');
   const [styleStatusMsg, setStyleStatusMsg] = useState<string | null>(null);
 
+  const emptyFermProfile: FermentationProfile = {
+    name: '',
+    description: '',
+    steps: [
+      { stepOrder: 1, name: 'Primary Fermentation', stepType: 'Hold', durationDays: 7, startTempC: 19, endTempC: 19, dryHopAddition: '', notes: '' },
+      { stepOrder: 2, name: 'Dry Hop & Diacetyl Rest', stepType: 'Ramp', durationDays: 4, startTempC: 19, endTempC: 21, dryHopAddition: '50g Hop on Day 7', notes: '' },
+      { stepOrder: 3, name: 'Cold Crash', stepType: 'Ramp', durationDays: 2, startTempC: 21, endTempC: 2, dryHopAddition: '', notes: '' },
+    ],
+  };
+  const [fermForm, setFermForm] = useState<FermentationProfile>(emptyFermProfile);
+
+  const emptyCarbProfile: CarbonationProfile = {
+    name: '',
+    type: 'Forced',
+    targetCo2Volumes: 2.4,
+    temperatureC: 4.0,
+    primingAgent: 'Corn Sugar (Dextrose)',
+    primingRateGramsPerLiter: 0.0,
+    kegPressurePsi: 11.3,
+    kegPressureBar: 0.78,
+    conditioningDays: 7,
+    notes: '',
+  };
+  const [carbForm, setCarbForm] = useState<CarbonationProfile>(emptyCarbProfile);
+
   const loadAll = async () => {
     const opts: RequestInit = { cache: 'no-store' };
-    const [rRes, eRes, wRes, sRes, iRes, bRes] = await Promise.all([
-      fetch(`${API}/recipes`, opts), fetch(`${API}/equipment`, opts), fetch(`${API}/waters`, opts),
-      fetch(`${API}/styles`, opts), fetch(`${API}/inventory`, opts), fetch(`${API}/brew-notes`, opts),
+    const [rRes, eRes, wRes, sRes, fRes, cRes, iRes, bRes] = await Promise.all([
+      fetch(`${API}/recipes`, opts),
+      fetch(`${API}/equipment`, opts),
+      fetch(`${API}/waters`, opts),
+      fetch(`${API}/styles`, opts),
+      fetch(`${API}/fermentation-profiles`, opts),
+      fetch(`${API}/carbonation-profiles`, opts),
+      fetch(`${API}/inventory`, opts),
+      fetch(`${API}/brew-notes`, opts),
     ]);
     const rData = await rRes.json();
     setRecipes(rData);
-    if (rData.length > 0 && !current.id) setCurrent(rData[0]);
+    if (rData.length > 0 && !current.id) {
+      setCurrent({
+        ...rData[0],
+        fermentationSteps: rData[0].fermentationSteps || [],
+      });
+    }
     setEquipmentList(await eRes.json());
     setWaterList(await wRes.json());
     setStylesList(await sRes.json());
+    setFermProfiles(await fRes.json());
+    setCarbProfiles(await cRes.json());
     setInventory(await iRes.json());
     setBrewNotes(await bRes.json());
   };
@@ -191,13 +237,17 @@ export default function App() {
   ]);
 
   const handleSaveRecipe = async () => {
+    const payload = {
+      ...current,
+      fermentationSteps: (current.fermentationSteps || []).map((s, idx) => ({ ...s, stepOrder: idx + 1 })),
+    };
     const res = await fetch(`${API}/recipes`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(current),
+      body: JSON.stringify(payload),
     });
     const saved = await res.json();
-    setCurrent(saved);
+    setCurrent({ ...saved, fermentationSteps: saved.fermentationSteps || [] });
     loadAll();
   };
 
@@ -208,7 +258,7 @@ export default function App() {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(current),
       });
       const saved = await res.json();
-      setCurrent(saved);
+      setCurrent({ ...saved, fermentationSteps: saved.fermentationSteps || [] });
       targetId = saved.id;
     }
     await fetch(`${API}/recipes/${targetId}/brew-day`, {
@@ -228,7 +278,7 @@ export default function App() {
     });
     if (res.ok) {
       const imported = await res.json();
-      setCurrent(imported);
+      setCurrent({ ...imported, fermentationSteps: imported.fermentationSteps || [] });
       loadAll();
     } else {
       alert(t('alertXmlFailed'));
@@ -240,10 +290,12 @@ export default function App() {
     stylesList.find((s) => current.style?.toLowerCase() === s.name.toLowerCase()) ||
     stylesList.find((s) => current.style?.startsWith(`${s.categoryNumber} `));
   const totalGrainKg = current.fermentables.reduce((acc, f) => acc + (f.type === 'Grain' ? f.amountKg : 0), 0);
+  const fermSteps = current.fermentationSteps || [];
+  const totalFermDays = fermSteps.reduce((acc, s) => acc + (Number(s.durationDays) || 0), 0);
 
   return (
     <div style={{ display: 'flex', fontFamily: 'system-ui, -apple-system, sans-serif', height: '100vh', color: '#1f2937' }}>
-      <aside style={{ width: 285, background: '#1e293b', color: '#f8fafc', display: 'flex', flexDirection: 'column', padding: 16 }}>
+      <aside style={{ width: 290, background: '#1e293b', color: '#f8fafc', display: 'flex', flexDirection: 'column', padding: 16 }}>
         <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4, color: '#fbbf24' }}>🍺 Yuki & Bomb's Crew Brew CO.</div>
         <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 12 }}>{t('subtitle')}</div>
 
@@ -284,6 +336,8 @@ export default function App() {
             ['inventory', t('navInventory')],
             ['equipment', t('navEquipment')],
             ['water', t('navWater')],
+            ['fermentation', t('navFermentation')],
+            ['carbonation', t('navCarbonation')],
             ['brewnotes', t('navBrewNotes')],
             ['calculators', t('navCalculators')],
           ].map(([key, label]) => (
@@ -318,7 +372,7 @@ export default function App() {
           {recipes.map((r) => (
             <div
               key={r.id}
-              onClick={() => { setCurrent(r); setNavSection('recipe'); }}
+              onClick={() => { setCurrent({ ...r, fermentationSteps: r.fermentationSteps || [] }); setNavSection('recipe'); }}
               style={{
                 padding: 10, marginBottom: 6, borderRadius: 6, cursor: 'pointer',
                 background: current.id === r.id && navSection === 'recipe' ? '#3b82f6' : '#334155',
@@ -355,7 +409,7 @@ export default function App() {
           style={{
             position: 'fixed',
             top: '50%',
-            left: 'calc(50% + 142px)',
+            left: 'calc(50% + 145px)',
             transform: 'translate(-50%, -50%)',
             width: 420,
             height: 420,
@@ -421,10 +475,11 @@ export default function App() {
                 </div>
               )}
 
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, background: '#fff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 16, fontSize: 13 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, background: '#fff', padding: 12, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 16, fontSize: 13 }}>
                 <label>
                   {t('equipmentPreset')}{' '}
                   <select
+                    style={{ background: '#fff', color: '#111827', padding: '4px 6px', borderRadius: 4, border: '1px solid #cbd5e1' }}
                     onChange={(e) => {
                       const eq = equipmentList.find((x) => x.id === Number(e.target.value));
                       if (eq) {
@@ -444,6 +499,56 @@ export default function App() {
                     ))}
                   </select>
                 </label>
+
+                <label>
+                  {t('fermPresetLabel')}{' '}
+                  <select
+                    style={{ background: '#fff', color: '#111827', padding: '4px 6px', borderRadius: 4, border: '1px solid #cbd5e1' }}
+                    onChange={(e) => {
+                      const fp = fermProfiles.find((p) => p.id === Number(e.target.value));
+                      if (fp) {
+                        setCurrent({
+                          ...current,
+                          fermentationSteps: fp.steps.map((s, idx) => ({
+                            stepOrder: idx + 1,
+                            name: s.name,
+                            stepType: s.stepType,
+                            durationDays: s.durationDays,
+                            startTempC: s.startTempC,
+                            endTempC: s.endTempC,
+                            dryHopAddition: s.dryHopAddition || '',
+                            notes: s.notes || '',
+                          })),
+                        });
+                      }
+                    }}
+                  >
+                    <option value="">{t('selectFermPreset')}</option>
+                    {fermProfiles.map((fp) => (
+                      <option key={fp.id} value={fp.id}>{fp.name}</option>
+                    ))}
+                  </select>
+                </label>
+
+                <label>
+                  {t('carbPresetLabel')}{' '}
+                  <select
+                    value={current.carbonationProfile?.id || ''}
+                    style={{ background: '#fff', color: '#111827', padding: '4px 6px', borderRadius: 4, border: '1px solid #cbd5e1' }}
+                    onChange={(e) => {
+                      const cp = carbProfiles.find((c) => c.id === Number(e.target.value)) || null;
+                      setCurrent({ ...current, carbonationProfile: cp });
+                    }}
+                  >
+                    <option value="">{t('selectCarbPreset')}</option>
+                    {carbProfiles.map((cp) => (
+                      <option key={cp.id} value={cp.id}>
+                        {cp.name} ({cp.type === 'Forced' ? `${cp.kegPressurePsi} PSI` : `${cp.primingRateGramsPerLiter} g/L`})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
                 <label>{t('batchL')} <input type="number" style={{ width: 65 }} value={current.batchSizeLiters} onChange={(e) => setCurrent({ ...current, batchSizeLiters: Number(e.target.value) })} /></label>
                 <label>{t('boilL')} <input type="number" style={{ width: 65 }} value={current.boilSizeLiters} onChange={(e) => setCurrent({ ...current, boilSizeLiters: Number(e.target.value) })} /></label>
                 <label>{t('boilMin')} <input type="number" style={{ width: 65 }} value={current.boilTimeMinutes} onChange={(e) => setCurrent({ ...current, boilTimeMinutes: Number(e.target.value) })} /></label>
@@ -468,10 +573,11 @@ export default function App() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: 8, borderBottom: '2px solid #e2e8f0', marginBottom: 16 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, borderBottom: '2px solid #e2e8f0', marginBottom: 16 }}>
                 {[
                   ['ingredients', t('tabIngredients')],
                   ['mash', t('tabMash')],
+                  ['fermentation', t('tabFermCarb')],
                   ['brewsheet', t('tabBrewSheet')],
                 ].map(([tab, title]) => (
                   <button
@@ -714,6 +820,213 @@ export default function App() {
                 </div>
               )}
 
+              {recipeTab === 'fermentation' && (
+                <div style={{ display: 'grid', gap: 20 }}>
+                  {/* Fermentation Ramps & Dry Hop Schedule */}
+                  <section style={{ background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', padding: 10, background: '#f8fafc', borderRadius: 6, border: '1px solid #e2e8f0', marginBottom: 14, fontSize: 13 }}>
+                      <strong>{t('fermPresetLabel')}</strong>
+                      <select
+                        onChange={(e) => {
+                          const fp = fermProfiles.find((p) => p.id === Number(e.target.value));
+                          if (fp) {
+                            setCurrent({
+                              ...current,
+                              fermentationSteps: fp.steps.map((s, idx) => ({
+                                stepOrder: idx + 1,
+                                name: s.name,
+                                stepType: s.stepType,
+                                durationDays: s.durationDays,
+                                startTempC: s.startTempC,
+                                endTempC: s.endTempC,
+                                dryHopAddition: s.dryHopAddition || '',
+                                notes: s.notes || '',
+                              })),
+                            });
+                          }
+                        }}
+                      >
+                        <option value="">{t('selectFermPreset')}</option>
+                        {fermProfiles.map((fp) => (
+                          <option key={fp.id} value={fp.id}>{fp.name}</option>
+                        ))}
+                      </select>
+                      <span style={{ color: '#0369a1', fontWeight: 600 }}>
+                        {t('totalDays')}: {totalFermDays} d
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <h3 style={{ margin: 0 }}>{t('fermStepsTitle')}</h3>
+                      <button
+                        type="button"
+                        onClick={() => setCurrent({
+                          ...current,
+                          fermentationSteps: [
+                            ...fermSteps,
+                            { stepOrder: fermSteps.length + 1, name: 'Dry Hop / Ramp', stepType: 'Ramp', durationDays: 3, startTempC: 19, endTempC: 21, dryHopAddition: '', notes: '' },
+                          ],
+                        })}
+                      >
+                        {t('addFermStep')}
+                      </button>
+                    </div>
+
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ textAlign: 'left', borderBottom: '1px solid #cbd5e1', fontSize: 13 }}>
+                          <th>#</th>
+                          <th>{t('colStageName')}</th>
+                          <th>{t('colStepMode')}</th>
+                          <th>{t('colDays')}</th>
+                          <th>{t('colStartTempC')}</th>
+                          <th>{t('colEndTempC')}</th>
+                          <th>{t('colDryHop')}</th>
+                          <th></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {fermSteps.map((s, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td>{idx + 1}</td>
+                            <td>
+                              <input
+                                value={s.name}
+                                onChange={(e) => {
+                                  const l = [...fermSteps]; l[idx].name = e.target.value;
+                                  setCurrent({ ...current, fermentationSteps: l });
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <select
+                                value={s.stepType}
+                                onChange={(e) => {
+                                  const l = [...fermSteps]; l[idx].stepType = e.target.value;
+                                  setCurrent({ ...current, fermentationSteps: l });
+                                }}
+                              >
+                                <option value="Hold">{t('modeHold')}</option>
+                                <option value="Ramp">{t('modeRamp')}</option>
+                                <option value="Conditioning">{t('modeConditioning')}</option>
+                              </select>
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                step="0.5"
+                                style={{ width: 65 }}
+                                value={s.durationDays}
+                                onChange={(e) => {
+                                  const l = [...fermSteps]; l[idx].durationDays = Number(e.target.value);
+                                  setCurrent({ ...current, fermentationSteps: l });
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                step="0.5"
+                                style={{ width: 65 }}
+                                value={s.startTempC}
+                                onChange={(e) => {
+                                  const l = [...fermSteps]; l[idx].startTempC = Number(e.target.value);
+                                  if (l[idx].stepType === 'Hold') l[idx].endTempC = Number(e.target.value);
+                                  setCurrent({ ...current, fermentationSteps: l });
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                type="number"
+                                step="0.5"
+                                style={{ width: 65 }}
+                                value={s.endTempC}
+                                onChange={(e) => {
+                                  const l = [...fermSteps]; l[idx].endTempC = Number(e.target.value);
+                                  setCurrent({ ...current, fermentationSteps: l });
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <input
+                                placeholder="e.g., 50g Citra (Day 4)"
+                                style={{ width: 190 }}
+                                value={s.dryHopAddition || ''}
+                                onChange={(e) => {
+                                  const l = [...fermSteps]; l[idx].dryHopAddition = e.target.value;
+                                  setCurrent({ ...current, fermentationSteps: l });
+                                }}
+                              />
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                onClick={() => setCurrent({ ...current, fermentationSteps: fermSteps.filter((_, i) => i !== idx) })}
+                              >
+                                ✕
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </section>
+
+                  {/* Carbonation Profile Assignment */}
+                  <section style={{ background: '#fff', padding: 16, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                    <h3 style={{ marginTop: 0 }}>{t('carbProfileTitle')}</h3>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 12, fontSize: 13 }}>
+                      <select
+                        value={current.carbonationProfile?.id || ''}
+                        onChange={(e) => {
+                          const cp = carbProfiles.find((c) => c.id === Number(e.target.value)) || null;
+                          setCurrent({ ...current, carbonationProfile: cp });
+                        }}
+                        style={{ padding: 6, minWidth: 300 }}
+                      >
+                        <option value="">{t('selectCarbPreset')}</option>
+                        {carbProfiles.map((cp) => (
+                          <option key={cp.id} value={cp.id}>
+                            {cp.name} ({cp.type === 'Forced' ? `${cp.kegPressurePsi} PSI / ${cp.kegPressureBar} bar` : `${cp.primingRateGramsPerLiter} g/L ${cp.primingAgent}`})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {current.carbonationProfile && (
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, background: '#f8fafc', padding: 12, borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13 }}>
+                        <div>
+                          <div style={{ color: '#64748b' }}>{t('carbMethod')}</div>
+                          <strong>{current.carbonationProfile.type === 'Forced' ? t('carbForced') : t('carbPriming')}</strong>
+                        </div>
+                        <div>
+                          <div style={{ color: '#64748b' }}>{t('targetCo2Label')} / {t('carbTempLabel')}</div>
+                          <strong>{current.carbonationProfile.targetCo2Volumes} vol @ {current.carbonationProfile.temperatureC}°C</strong>
+                        </div>
+                        {current.carbonationProfile.type === 'Forced' ? (
+                          <div>
+                            <div style={{ color: '#64748b' }}>{t('kegPressureLabel')}</div>
+                            <strong style={{ color: '#1d4ed8' }}>{current.carbonationProfile.kegPressurePsi} PSI ({current.carbonationProfile.kegPressureBar} bar)</strong>
+                          </div>
+                        ) : (
+                          <div>
+                            <div style={{ color: '#64748b' }}>{t('primingTotalLabel')} ({current.batchSizeLiters}L)</div>
+                            <strong style={{ color: '#15803d' }}>
+                              {(current.carbonationProfile.primingRateGramsPerLiter * current.batchSizeLiters).toFixed(1)} g ({current.carbonationProfile.primingAgent})
+                            </strong>
+                          </div>
+                        )}
+                        <div>
+                          <div style={{ color: '#64748b' }}>{t('condDaysLabel')}</div>
+                          <strong>{current.carbonationProfile.conditioningDays} d</strong>
+                        </div>
+                      </div>
+                    )}
+                  </section>
+                </div>
+              )}
+
               {recipeTab === 'brewsheet' && (
                 <div style={{ background: '#fff', padding: 24, borderRadius: 8, border: '1px solid #cbd5e1' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -734,12 +1047,381 @@ export default function App() {
                     {current.hops.map((h, i) => <li key={i}>{h.amountGrams} g — {h.name} ({h.alphaAcidPercent}% AA) — {h.useType} @ {h.boilTimeMinutes} min</li>)}
                     {current.miscs.map((m, i) => <li key={i}>{m.amount} {m.unit} — {m.name} ({m.useType} @ {m.timeMinutes} min)</li>)}
                   </ul>
-                  <h4>{t('sheetFermentation')}</h4>
-                  <ul>{current.yeasts.map((y, i) => <li key={i}>{y.name} ({y.laboratory} {y.productId}) — {y.attenuationPercent}% {t('attenuation')}</li>)}</ul>
+                  <h4>{t('sheetFermentation')} ({totalFermDays} d)</h4>
+                  <ul>
+                    {current.yeasts.map((y, i) => <li key={i}>{y.name} ({y.laboratory} {y.productId}) — {y.attenuationPercent}% {t('attenuation')}</li>)}
+                    {fermSteps.map((fs, i) => (
+                      <li key={`fs-${i}`}>
+                        {fs.name} ({fs.stepType}): {fs.durationDays} d — {fs.startTempC}°C → {fs.endTempC}°C
+                        {fs.dryHopAddition ? ` | Dry Hop: ${fs.dryHopAddition}` : ''}
+                      </li>
+                    ))}
+                  </ul>
+                  {current.carbonationProfile && (
+                    <>
+                      <h4>{t('sheetCarb')}</h4>
+                      <p>
+                        <strong>{current.carbonationProfile.name}</strong> ({current.carbonationProfile.targetCo2Volumes} vol CO₂ @ {current.carbonationProfile.temperatureC}°C) —{' '}
+                        {current.carbonationProfile.type === 'Forced'
+                          ? `${current.carbonationProfile.kegPressurePsi} PSI (${current.carbonationProfile.kegPressureBar} bar)`
+                          : `${(current.carbonationProfile.primingRateGramsPerLiter * current.batchSizeLiters).toFixed(1)} g ${current.carbonationProfile.primingAgent}`}
+                      </p>
+                    </>
+                  )}
                   {current.notes && <><h4>{t('sheetNotes')}</h4><p>{current.notes}</p></>}
                 </div>
               )}
             </>
+          )}
+
+          {navSection === 'fermentation' && (
+            <div style={{ display: 'grid', gap: 20 }}>
+              <div style={{ background: '#fff', padding: 20, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <h2 style={{ marginTop: 0 }}>{fermForm.id ? t('editFermProfile') : t('addFermProfile')}</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 12, marginBottom: 14, fontSize: 13 }}>
+                  <label>
+                    {t('fermProfileName')}
+                    <input
+                      style={{ display: 'block', width: '100%', padding: 6, marginTop: 4 }}
+                      placeholder="e.g., West Coast IPA + 2x Dry Hop"
+                      value={fermForm.name}
+                      onChange={(e) => setFermForm({ ...fermForm, name: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    {t('fermDescription')}
+                    <input
+                      style={{ display: 'block', width: '100%', padding: 6, marginTop: 4 }}
+                      value={fermForm.description}
+                      onChange={(e) => setFermForm({ ...fermForm, description: e.target.value })}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <h4 style={{ margin: 0 }}>{t('fermStepsTitle')}</h4>
+                  <button
+                    type="button"
+                    onClick={() => setFermForm({
+                      ...fermForm,
+                      steps: [
+                        ...fermForm.steps,
+                        { stepOrder: fermForm.steps.length + 1, name: 'New Step', stepType: 'Ramp', durationDays: 3, startTempC: 19, endTempC: 21, dryHopAddition: '', notes: '' },
+                      ],
+                    })}
+                  >
+                    {t('addFermStep')}
+                  </button>
+                </div>
+
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 14 }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #cbd5e1', fontSize: 13 }}>
+                      <th>#</th>
+                      <th>{t('colStageName')}</th>
+                      <th>{t('colStepMode')}</th>
+                      <th>{t('colDays')}</th>
+                      <th>{t('colStartTempC')}</th>
+                      <th>{t('colEndTempC')}</th>
+                      <th>{t('colDryHop')}</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fermForm.steps.map((s, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td>{idx + 1}</td>
+                        <td><input value={s.name} onChange={(e) => { const l = [...fermForm.steps]; l[idx].name = e.target.value; setFermForm({ ...fermForm, steps: l }); }} /></td>
+                        <td>
+                          <select value={s.stepType} onChange={(e) => { const l = [...fermForm.steps]; l[idx].stepType = e.target.value; setFermForm({ ...fermForm, steps: l }); }}>
+                            <option value="Hold">{t('modeHold')}</option>
+                            <option value="Ramp">{t('modeRamp')}</option>
+                            <option value="Conditioning">{t('modeConditioning')}</option>
+                          </select>
+                        </td>
+                        <td><input type="number" step="0.5" style={{ width: 65 }} value={s.durationDays} onChange={(e) => { const l = [...fermForm.steps]; l[idx].durationDays = Number(e.target.value); setFermForm({ ...fermForm, steps: l }); }} /></td>
+                        <td>
+                          <input
+                            type="number"
+                            step="0.5"
+                            style={{ width: 65 }}
+                            value={s.startTempC}
+                            onChange={(e) => {
+                              const l = [...fermForm.steps];
+                              l[idx].startTempC = Number(e.target.value);
+                              if (l[idx].stepType === 'Hold') l[idx].endTempC = Number(e.target.value);
+                              setFermForm({ ...fermForm, steps: l });
+                            }}
+                          />
+                        </td>
+                        <td><input type="number" step="0.5" style={{ width: 65 }} value={s.endTempC} onChange={(e) => { const l = [...fermForm.steps]; l[idx].endTempC = Number(e.target.value); setFermForm({ ...fermForm, steps: l }); }} /></td>
+                        <td><input style={{ width: 190 }} placeholder="e.g., 60g Citra (Day 4)" value={s.dryHopAddition || ''} onChange={(e) => { const l = [...fermForm.steps]; l[idx].dryHopAddition = e.target.value; setFermForm({ ...fermForm, steps: l }); }} /></td>
+                        <td><button type="button" onClick={() => setFermForm({ ...fermForm, steps: fermForm.steps.filter((_, i) => i !== idx) })}>✕</button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!fermForm.name.trim()) return;
+                      await fetch(`${API}/fermentation-profiles`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(fermForm),
+                      });
+                      setFermForm(emptyFermProfile);
+                      await loadAll();
+                    }}
+                    style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    {fermForm.id ? t('updateFermProfile') : t('saveFermProfile')}
+                  </button>
+                  {fermForm.id && (
+                    <button type="button" onClick={() => setFermForm(emptyFermProfile)} style={{ padding: '8px 14px', background: '#e2e8f0', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+                      {t('cancelEdit')}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ background: '#fff', padding: 20, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <h2 style={{ marginTop: 0 }}>{t('savedFermProfiles')} ({fermProfiles.length})</h2>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #cbd5e1', fontSize: 13 }}>
+                      <th>{t('fermProfileName')}</th>
+                      <th>{t('totalDays')}</th>
+                      <th>{t('fermStepsTitle')}</th>
+                      <th>{t('colActions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {fermProfiles.map((fp) => {
+                      const days = (fp.steps || []).reduce((a, b) => a + b.durationDays, 0);
+                      return (
+                        <tr key={fp.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: 13 }}>
+                          <td>
+                            <strong>{fp.name}</strong>
+                            <div style={{ fontSize: 11, color: '#64748b' }}>{fp.description}</div>
+                          </td>
+                          <td>{days} d</td>
+                          <td>
+                            {(fp.steps || []).map((s, i) => (
+                              <div key={i}>
+                                {i + 1}. <strong>{s.name}</strong> ({s.stepType}, {s.durationDays}d): {s.startTempC}°C → {s.endTempC}°C
+                                {s.dryHopAddition ? ` · 🌿 ${s.dryHopAddition}` : ''}
+                              </div>
+                            ))}
+                          </td>
+                          <td style={{ display: 'flex', gap: 6, padding: '6px 0' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCurrent({
+                                  ...current,
+                                  fermentationSteps: (fp.steps || []).map((s, idx) => ({
+                                    stepOrder: idx + 1,
+                                    name: s.name,
+                                    stepType: s.stepType,
+                                    durationDays: s.durationDays,
+                                    startTempC: s.startTempC,
+                                    endTempC: s.endTempC,
+                                    dryHopAddition: s.dryHopAddition || '',
+                                    notes: s.notes || '',
+                                  })),
+                                });
+                                setNavSection('recipe');
+                                setRecipeTab('fermentation');
+                              }}
+                            >
+                              {t('btnUse')}
+                            </button>
+                            <button type="button" onClick={() => setFermForm(fp)}>{t('btnEdit')}</button>
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!fp.id) return;
+                                await fetch(`${API}/fermentation-profiles/${fp.id}`, { method: 'DELETE' });
+                                await loadAll();
+                              }}
+                            >
+                              {t('btnDelete')}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {navSection === 'carbonation' && (
+            <div style={{ display: 'grid', gap: 20 }}>
+              <div style={{ background: '#fff', padding: 20, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <h2 style={{ marginTop: 0 }}>{carbForm.id ? t('editCarbProfile') : t('addCarbProfile')}</h2>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 14, fontSize: 13 }}>
+                  <label style={{ gridColumn: 'span 2' }}>
+                    {t('carbProfileName')}
+                    <input
+                      style={{ display: 'block', width: '100%', padding: 6, marginTop: 4 }}
+                      placeholder="e.g., Keg Forced 2.5 Vol @ 4°C or Bottle Dextrose 2.4 Vol"
+                      value={carbForm.name}
+                      onChange={(e) => setCarbForm({ ...carbForm, name: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    {t('carbMethod')}
+                    <select
+                      style={{ display: 'block', width: '100%', padding: 6, marginTop: 4 }}
+                      value={carbForm.type}
+                      onChange={(e) => setCarbForm({ ...carbForm, type: e.target.value })}
+                    >
+                      <option value="Forced">{t('carbForced')}</option>
+                      <option value="Priming">{t('carbPriming')}</option>
+                    </select>
+                  </label>
+                  <label>
+                    {t('targetCo2Label')}
+                    <input
+                      type="number"
+                      step="0.1"
+                      style={{ display: 'block', width: '100%', padding: 6, marginTop: 4 }}
+                      value={carbForm.targetCo2Volumes}
+                      onChange={(e) => setCarbForm({ ...carbForm, targetCo2Volumes: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label>
+                    {t('carbTempLabel')}
+                    <input
+                      type="number"
+                      step="0.5"
+                      style={{ display: 'block', width: '100%', padding: 6, marginTop: 4 }}
+                      value={carbForm.temperatureC}
+                      onChange={(e) => setCarbForm({ ...carbForm, temperatureC: Number(e.target.value) })}
+                    />
+                  </label>
+                  {carbForm.type === 'Priming' && (
+                    <label>
+                      {t('primingAgentLabel')}
+                      <select
+                        style={{ display: 'block', width: '100%', padding: 6, marginTop: 4 }}
+                        value={carbForm.primingAgent}
+                        onChange={(e) => setCarbForm({ ...carbForm, primingAgent: e.target.value })}
+                      >
+                        <option value="Corn Sugar (Dextrose)">Corn Sugar (Dextrose)</option>
+                        <option value="Table Sugar (Sucrose)">Table Sugar (Sucrose)</option>
+                        <option value="Dry Malt Extract (DME)">Dry Malt Extract (DME)</option>
+                      </select>
+                    </label>
+                  )}
+                  <label>
+                    {t('condDaysLabel')}
+                    <input
+                      type="number"
+                      style={{ display: 'block', width: '100%', padding: 6, marginTop: 4 }}
+                      value={carbForm.conditioningDays}
+                      onChange={(e) => setCarbForm({ ...carbForm, conditioningDays: Number(e.target.value) })}
+                    />
+                  </label>
+                  <label style={{ gridColumn: 'span 2' }}>
+                    {t('colNotes')}
+                    <input
+                      style={{ display: 'block', width: '100%', padding: 6, marginTop: 4 }}
+                      value={carbForm.notes}
+                      onChange={(e) => setCarbForm({ ...carbForm, notes: e.target.value })}
+                    />
+                  </label>
+                </div>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!carbForm.name.trim()) return;
+                      await fetch(`${API}/carbonation-profiles`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(carbForm),
+                      });
+                      setCarbForm(emptyCarbProfile);
+                      await loadAll();
+                    }}
+                    style={{ padding: '8px 16px', background: '#2563eb', color: '#fff', border: 'none', borderRadius: 6, fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    {carbForm.id ? t('updateCarbProfile') : t('saveCarbProfile')}
+                  </button>
+                  {carbForm.id && (
+                    <button type="button" onClick={() => setCarbForm(emptyCarbProfile)} style={{ padding: '8px 14px', background: '#e2e8f0', border: 'none', borderRadius: 6, cursor: 'pointer' }}>
+                      {t('cancelEdit')}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div style={{ background: '#fff', padding: 20, borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                <h2 style={{ marginTop: 0 }}>{t('savedCarbProfiles')} ({carbProfiles.length})</h2>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ textAlign: 'left', borderBottom: '1px solid #cbd5e1', fontSize: 13 }}>
+                      <th>{t('carbProfileName')}</th>
+                      <th>{t('carbMethod')}</th>
+                      <th>{t('targetCo2Label')}</th>
+                      <th>{t('carbTempLabel')}</th>
+                      <th>{t('kegPressureLabel')} / {t('primingAgentLabel')}</th>
+                      <th>{t('condDaysLabel')}</th>
+                      <th>{t('colActions')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {carbProfiles.map((cp) => (
+                      <tr key={cp.id} style={{ borderBottom: '1px solid #f1f5f9', fontSize: 13 }}>
+                        <td>
+                          <strong>{cp.name}</strong>
+                          <div style={{ fontSize: 11, color: '#64748b' }}>{cp.notes}</div>
+                        </td>
+                        <td>{cp.type === 'Forced' ? t('carbForced') : t('carbPriming')}</td>
+                        <td>{cp.targetCo2Volumes} vol</td>
+                        <td>{cp.temperatureC}°C</td>
+                        <td>
+                          {cp.type === 'Forced'
+                            ? <strong>{cp.kegPressurePsi} PSI ({cp.kegPressureBar} bar)</strong>
+                            : <strong>{cp.primingRateGramsPerLiter} g/L ({cp.primingAgent})</strong>}
+                        </td>
+                        <td>{cp.conditioningDays} d</td>
+                        <td style={{ display: 'flex', gap: 6, padding: '6px 0' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCurrent({ ...current, carbonationProfile: cp });
+                              setNavSection('recipe');
+                              setRecipeTab('fermentation');
+                            }}
+                          >
+                            {t('btnUse')}
+                          </button>
+                          <button type="button" onClick={() => setCarbForm(cp)}>{t('btnEdit')}</button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!cp.id) return;
+                              await fetch(`${API}/carbonation-profiles/${cp.id}`, { method: 'DELETE' });
+                              await loadAll();
+                            }}
+                          >
+                            {t('btnDelete')}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {navSection === 'styles' && (
