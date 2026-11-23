@@ -21,11 +21,10 @@ RUN mvn package -DskipTests
 
 # Stage 3: Minimal Fedora latest Runtime
 FROM registry.fedoraproject.org/fedora:latest
-RUN dnf install -y java-25-openjdk-headless && dnf clean all
+RUN dnf install -y java-25-openjdk-headless && dnf clean all && mkdir -p /app/data && useradd -m -u 1000 brewer && chown -R brewer:brewer /app
 
 WORKDIR /app
 COPY --from=api-builder /app/target/beerbrew-web-1.0.0.jar app.jar
-RUN mkdir -p /app/data && useradd -m -u 1000 brewer && chown -R brewer:brewer /app
 
 USER brewer
 EXPOSE 8080
