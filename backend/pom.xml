@@ -6,7 +6,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.4.13</version>
+        <version>3.5.13</version>
     </parent>
 
     <groupId>com.beerbrew</groupId>
@@ -15,12 +15,12 @@
     <description>Yuki &amp; Bomb's Crew Brew CO. Web Application</description>
 
     <properties>
-        <java.version>21</java.version>
+        <java.version>25</java.version>
 	<!-- Security patches for flagged transitive dependencies -->
-        <jackson-bom.version>2.18.6</jackson-bom.version>
+        <jackson-bom.version>2.18.11</jackson-bom.version>
         <spring-data-bom.version>2024.1.12</spring-data-bom.version>
-        <logback.version>1.5.21</logback.version>
-        <log4j2.version>2.25.2</log4j2.version>
+        <logback.version>1.5.34</logback.version>
+        <log4j2.version>2.25.5</log4j2.version>
     </properties>
 
     <dependencies>
