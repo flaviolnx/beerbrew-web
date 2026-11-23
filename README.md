@@ -100,8 +100,8 @@ The `Containerfile` uses `registry.fedoraproject.org/fedora:latest` across all t
 ---
 
 ## 🚀 How to Run and Use the Container
-
-### 1. Prepare Persistent SQLite Storage
+### Option 1 SQlite (default)
+#### 1. Prepare Persistent SQLite Storage
 
 SQLite stores all recipes, styles, equipment profiles, water profiles, inventory, and brew logs in `/app/data/beerbrew.db` inside the container. Create a host directory with proper ownership so rootless Podman can read and write the database and WAL journal files:
 
@@ -111,7 +111,7 @@ sudo chown -R $(id -u):$(id -g) ~/.local/share/beerbrew-web-data
 chmod 775 ~/.local/share/beerbrew-web-data
 ```
 
-### 2. Start the Container
+#### 2. Start the Container
 
 ```bash
 podman run -d \
@@ -124,7 +124,7 @@ podman run -d \
   beerbrew-web:1.0.0
 ```
 
-#### Container Flag Reference
+##### Container Flag Reference
 | Flag | Purpose |
 | :--- | :--- |
 | `-d` | Runs the container in the background (detached mode). |
@@ -134,7 +134,7 @@ podman run -d \
 | `-p 8080:8080` | Maps host port `8080` to the Spring Boot embedded Tomcat server. |
 | `-v ~/.local/share/beerbrew-web-data:/app/data:Z` | Persists `beerbrew.db` on your host filesystem with private SELinux relabeling (`:Z`). |
 
-### 3. Access the Application
+#### 3. Access the Application
 
 1. **Verify startup in logs:**
    ```bash
@@ -145,6 +145,41 @@ podman run -d \
    Navigate to **[http://localhost:8080](http://localhost:8080)**.
 
 ---
+### Option 2 - Postgresql
+#### 1. Prepare Persistent Postgresql Storage
+```bash
+mkdir -p ~/.local/share/beerbrew-pgdata
+sudo chown -R $(id -u):$(id -g) ~/.local/share/beerbrew-pgdata
+chmod 775 ~/.local/share/beerbrew-pgdata
+```
+#### 2. Prepare Persistent network
+```bash
+podman network create beerbrew-net 2>/dev/null || true
+```
+#### 3. Start the containers
+```bash
+podman run -d \
+  --name beerbrew-postgres \
+  --network beerbrew-net \
+  --restart unless-stopped \
+  -e POSTGRES_DB=beerbrew \
+  -e POSTGRES_USER=beerbrew \
+  -e POSTGRES_PASSWORD=beerbrew \
+  -v ~/.local/share/beerbrew-pgdata:/var/lib/postgresql/data:Z \
+  docker.io/library/postgres:latest
+
+podman rm -f beerbrew-web 2>/dev/null || true
+podman run -d \
+  --name beerbrew-web \
+  --network beerbrew-net \
+  --restart unless-stopped \
+  -p 8080:8080 \
+  -e SPRING_PROFILES_ACTIVE=postgres \
+  -e SPRING_DATASOURCE_URL=jdbc:postgresql://beerbrew-postgres:5432/beerbrew \
+  -e SPRING_DATASOURCE_USERNAME=beerbrew \
+  -e SPRING_DATASOURCE_PASSWORD=beerbrew \
+  beerbrew-web:1.0.0
+```
 
 ## 🔄 Container Lifecycle & Backup Commands
 
