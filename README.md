@@ -89,7 +89,7 @@ The `Containerfile` uses `registry.fedoraproject.org/fedora:latest` across all t
 
 2. **Build the image with Podman:**
    ```bash
-   podman build -t beerbrew-web:1.0.0 -f Containerfile .
+   podman build -t beerbrew-web:latest -f Containerfile .
    ```
 
 3. **Verify the image was created:**
@@ -121,7 +121,7 @@ podman run -d \
 *-user $(id -u):$(id -g) \
 *p 8080:8080 \
 *v ~/.local/share/beerbrew-web-data:/app/data:Z \
-  beerbrew-web:1.0.0
+  beerbrew-web:latest
 ```
 
 ##### Container Flag Reference
@@ -178,7 +178,7 @@ podman run -d \
   -e SPRING_DATASOURCE_URL=jdbc:postgresql://beerbrew-postgres:5432/beerbrew \
   -e SPRING_DATASOURCE_USERNAME=beerbrew \
   -e SPRING_DATASOURCE_PASSWORD=beerbrew \
-  beerbrew-web:1.0.0
+  beerbrew-web:latest
 ```
 
 ## 🔄 Container Lifecycle & Backup Commands
@@ -193,7 +193,7 @@ podman run -d \
   ```
 * **Update after code changes:**
   ```bash
-  podman build -t beerbrew-web:1.0.0 -f Containerfile .
+  podman build -t beerbrew-web:latest -f Containerfile .
   podman rm -f beerbrew-web
   # Re-run the `podman run -d ...` command above (your SQLite data in ~/.local/share/beerbrew-web-data is preserved)
   ```
@@ -218,7 +218,7 @@ To manage `beerbrew-web` as a native rootless systemd user service on Fedora:
    After=network-online.target
 
    [Container]
-   Image=localhost/beerbrew-web:1.0.0
+   Image=localhost/beerbrew-web:latest
    ContainerName=beerbrew-web
    PublishPort=8080:8080
    UserNS=keep-id

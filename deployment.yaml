@@ -145,7 +145,7 @@ spec:
       containers:
         - name: beerbrew-web
           # Replace with your pushed registry image or internal OpenShift ImageStream
-          image: quay.io/flaviolnx/beerbrew-web:1.0.0
+          image: quay.io/flaviolnx/beerbrew-web:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080
